@@ -12,6 +12,9 @@ masterTableRouter.get('/caste', masterTableController.getCaste)
 masterTableRouter.get('/religion', masterTableController.getReligion)
 masterTableRouter.get('/nationality', masterTableController.getNationality)
 
+masterTableRouter.get('/occupation', masterTableController.getOccupation)
+masterTableRouter.get('/designation', masterTableController.getDesignation)
+
 masterTableRouter.get('/city', masterTableController.getCity)
 masterTableRouter.get('/district', masterTableController.getDistrict)
 masterTableRouter.get('/state', masterTableController.getState)

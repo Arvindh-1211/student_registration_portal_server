@@ -63,20 +63,39 @@ class StudentRegController {
                     SELECT course_id, dept_id, branch_type, degree_level, no_of_year
                     FROM branch_master WHERE branch_id=${fields.branch_id}
                 `)
-
             fields.course_id = branch_details[0][0].course_id
             fields.dept_id = branch_details[0][0].dept_id
             fields.degree_level = branch_details[0][0].degree_level
+            
             if(fields.year_of_completion === ''){
                 fields.year_of_completion = fields.year_of_admission + branch_details[0][0].no_of_year
             }
+
+            // Getting regulation_id
+            let year_master_id = ''
+            if(fields.degree_level == 'RS'){
+                year_master_id = '4'
+            }
+            else if(fields.degree_level == 'PG'){
+                year_master_id = '3'
+            }
+            else if(fields.degree_level == 'UG' && fields.student_cat_id == 12){
+                year_master_id = '2'
+            }
+            else{
+                year_master_id = '1'
+            }
+            const regulation_id = await connection.query(`
+                SELECT regulation FROM year_master WHERE id=${year_master_id}
+            `)
+            fields.regulation_id = regulation_id[0][0].regulation
 
             // Getting batch_id
             if (fields.student_cat_id == 12) {
                 const batch_id = await connection.query(`
                         SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission}
                     `)
-                fields.batch_id = batch_id[0][0]
+                fields.batch_id = batch_id[0][0].batch_id
             } else {
                 const batch_id = await connection.query(`
                     SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission - 1}
@@ -84,8 +103,7 @@ class StudentRegController {
                 fields.batch_id = batch_id[0][0].batch_id
             }
 
-            // Getting acad_yr_id
-            const acad_yr_id = await connection.query(`
+             const acad_yr_id = await connection.query(`
                 SELECT acc_year_id FROM academic_year_master WHERE acc_year='${fields.year_of_admission}-${fields.year_of_admission + 1}'
                 `)
 
@@ -97,6 +115,7 @@ class StudentRegController {
             connection.release();
         }
 
+        // Inserintg the values in the student_register table
         connection = await db.getConnection()
         try {
             const sql = `
@@ -107,16 +126,13 @@ class StudentRegController {
                 '${Object.values(fields).join("', '")}'
                 )
             `
-            // res.send(sql)
             const result = await connection.query(sql)
-            res.json({application_no: result[0].insertId})
+            res.send({application_no: result[0].insertId})
         } catch (error) {
             res.status(500).send({ error: 'Error inserting data into DB', message: error });
         } finally {
             connection.release();
         }
-
-
     }
 
     updateStudentReg = async (req, res) => {
@@ -128,6 +144,7 @@ class StudentRegController {
             }
             WHERE application_no = ${req.params.application_no}
         `;
+        
         const connection = await db.getConnection()
         try {
             const result = await connection.query(sql)
