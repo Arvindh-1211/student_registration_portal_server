@@ -12,14 +12,11 @@ class StudentRegController {
             WHERE application_no = ${applicationNo}
         `;
 
-        const connection = await db.getConnection()
         try {
-            const result = await connection.query(sql)
+            const result = await db.query(sql)
             res.send(result[0][0]);
         } catch (error) {
             res.status(500).send({ message: 'Error fetching data from student_register' });
-        } finally {
-            connection.release();
         }
     }
 
@@ -42,68 +39,67 @@ class StudentRegController {
             section: 'A',
         }
 
-        fields.branch_id = req.body.branch_id
-        fields.branch_type = fields.branch_id
-        fields.student_cat_id = req.body.student_cat_id
-        fields.year_of_admission = new Date().getFullYear()
-
-        if (fields.student_cat_id == 12) {
-            fields.year_of_study = 'II'
-            fields.sem_of_study = 'III'
-            fields.year_of_completion = fields.year_of_admission + 3
-        } else {
-            fields.year_of_study = 'I'
-            fields.sem_of_study = 'I'
-        }
-
-        let connection = await camps.getConnection()
         try {
+            fields.branch_id = req.body.branch_id
+            fields.branch_type = fields.branch_id
+            fields.student_cat_id = req.body.student_cat_id
+            fields.year_of_admission = new Date().getFullYear()
+
+            if (fields.student_cat_id == 12) {
+                fields.year_of_study = 'II'
+                fields.sem_of_study = 'III'
+                fields.year_of_completion = fields.year_of_admission + 3
+            } else {
+                fields.year_of_study = 'I'
+                fields.sem_of_study = 'I'
+            }
+
             // Getting branch details
-            const branch_details = await connection.query(`
+            const branch_details = await camps.query(`
                     SELECT course_id, dept_id, branch_type, degree_level, no_of_year
                     FROM branch_master WHERE branch_id=${fields.branch_id}
                 `)
             fields.course_id = branch_details[0][0].course_id
             fields.dept_id = branch_details[0][0].dept_id
             fields.degree_level = branch_details[0][0].degree_level
-            
-            if(fields.year_of_completion === ''){
+
+            if (fields.year_of_completion === '') {
                 fields.year_of_completion = fields.year_of_admission + branch_details[0][0].no_of_year
             }
 
             // Getting regulation_id
             let year_master_id = ''
-            if(fields.degree_level == 'RS'){
+            if (fields.degree_level == 'RS') {
                 year_master_id = '4'
             }
-            else if(fields.degree_level == 'PG'){
+            else if (fields.degree_level == 'PG') {
                 year_master_id = '3'
             }
-            else if(fields.degree_level == 'UG' && fields.student_cat_id == 12){
+            else if (fields.degree_level == 'UG' && fields.student_cat_id == 12) {
                 year_master_id = '2'
             }
-            else{
+            else {
                 year_master_id = '1'
             }
-            const regulation_id = await connection.query(`
+            const regulation_id = await camps.query(`
                 SELECT regulation FROM year_master WHERE id=${year_master_id}
             `)
             fields.regulation_id = regulation_id[0][0].regulation
 
             // Getting batch_id
             if (fields.student_cat_id == 12) {
-                const batch_id = await connection.query(`
+                const batch_id = await camps.query(`
                         SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission}
                     `)
                 fields.batch_id = batch_id[0][0].batch_id
             } else {
-                const batch_id = await connection.query(`
+                const batch_id = await camps.query(`
                     SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission - 1}
                     `)
                 fields.batch_id = batch_id[0][0].batch_id
             }
 
-             const acad_yr_id = await connection.query(`
+            const acad_yr_id = await camps.query(`
                 SELECT acc_year_id FROM academic_year_master WHERE acc_year='${fields.year_of_admission}-${fields.year_of_admission + 1}'
                 `)
 
@@ -111,12 +107,9 @@ class StudentRegController {
 
         } catch (error) {
             res.status(500).send({ error: 'Error fetching data from master tables', message: error.message });
-        } finally {
-            connection.release();
         }
 
         // Inserintg the values in the student_register table
-        connection = await db.getConnection()
         try {
             const sql = `
                 INSERT INTO student_registration (
@@ -126,12 +119,10 @@ class StudentRegController {
                 '${Object.values(fields).join("', '")}'
                 )
             `
-            const result = await connection.query(sql)
-            res.send({application_no: result[0].insertId})
+            const result = await db.query(sql)
+            res.send({ application_no: result[0].insertId })
         } catch (error) {
             res.status(500).send({ error: 'Error inserting data into DB', message: error });
-        } finally {
-            connection.release();
         }
     }
 
@@ -144,15 +135,12 @@ class StudentRegController {
             }
             WHERE application_no = ${req.params.application_no}
         `;
-        
-        const connection = await db.getConnection()
+
         try {
-            const result = await connection.query(sql)
+            const result = await db.query(sql)
             res.send(result);
         } catch (error) {
             res.status(500).send({ message: 'Error updating student_register' });
-        } finally {
-            connection.release();
         }
     }
 }

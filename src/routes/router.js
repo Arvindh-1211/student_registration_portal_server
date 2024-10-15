@@ -1,6 +1,5 @@
 const express = require("express");
 const Router = express.Router;
-const httpStatus = require("http-status");
 
 const masterTableRouter = require('./masterTableRouter');
 const StudentRegController = require("../controller/StudentReg");

@@ -13,18 +13,3 @@ app.use('/api',router)
 app.listen(configs.PORT, () => {
 	console.log('Server is alive and listening on port', configs.PORT);
 });
-
-
-// app.get('/new', (req, res) => {
-// 	const sql = `INSERT INTO student_registration (year_of_admission) VALUES (YEAR(CURDATE()))`;
-
-// 	db.execute(sql)
-// 		.then(result => {
-// 			const applicationNo = result[0].insertId;
-// 			console.log(applicationNo);
-// 			res.json({ applicationNo: applicationNo });
-// 		})
-// 		.catch(err => {
-// 			console.error(err);
-// 		});
-// })
