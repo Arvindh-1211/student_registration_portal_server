@@ -23,6 +23,7 @@ const campsConfig = {
 
 const configs = {
   PORT: getEnvVar('PORT', 8000),
+  JWT_SECRET: getEnvVar('JWT_SECRET', ''),
   DB: dbConfig,
   CAMPS: campsConfig,
 }

@@ -8,7 +8,7 @@ class StudentRegController {
 
         const sql = `
             SELECT ${fields}
-            FROM student_registration
+            FROM student_register
             WHERE application_no = ${applicationNo}
         `;
 
@@ -16,12 +16,13 @@ class StudentRegController {
             const result = await db.query(sql)
             res.send(result[0][0]);
         } catch (error) {
-            res.status(500).send({ message: 'Error fetching data from student_register' });
+            res.status(500).send({ error: 'Error fetching data from student_register', message: error.message });
         }
     }
 
     insertNew = async (req, res) => {
         let fields = {
+            application_no: '',
             batch_id: '',
             acad_yr_id: '',
             branch_id: '',
@@ -105,42 +106,90 @@ class StudentRegController {
 
             fields.acad_yr_id = acad_yr_id[0][0].acc_year_id
 
+            // Getting application number from student_reg_temp
+            try {
+                const sql = `INSERT INTO student_reg_temp (ip) VALUES (NULL);`
+
+                const result = await db.query(sql)
+
+                fields.application_no = result[0].insertId
+
+                // Inserintg the values in the student_register table
+                try {
+                    const sql = `
+                    INSERT INTO student_register (
+                    ${Object.keys(fields).join(', ')}
+                    )
+                    VALUES(
+                    '${Object.values(fields).join("', '")}'
+                    )
+                `
+                    const result = await db.query(sql)
+                    res.send({ application_no: fields.application_no })
+                } catch (error) {
+                    res.status(500).send({ error: 'Error inserting data into student_register', message: error.message });
+                }
+            } catch (error) {
+                res.status(500).send({ error: 'Error inserting data into student_reg_temp', message: error })
+            }
         } catch (error) {
             res.status(500).send({ error: 'Error fetching data from master tables', message: error.message });
         }
 
-        // Inserintg the values in the student_register table
-        try {
-            const sql = `
-                INSERT INTO student_registration (
-                ${Object.keys(fields).join(', ')}
-                )
-                VALUES(
-                '${Object.values(fields).join("', '")}'
-                )
-            `
-            const result = await db.query(sql)
-            res.send({ application_no: result[0].insertId })
-        } catch (error) {
-            res.status(500).send({ error: 'Error inserting data into DB', message: error });
-        }
     }
 
     updateStudentReg = async (req, res) => {
-        const sql = `
-            UPDATE student_registration
+        try {
+            const sql = `
+            UPDATE student_register
             SET ${Object.entries(req.body)
-                .map(([key, value]) => `${key} = '${value}'`)
-                .join(', ')
-            }
+                    .map(([key, value]) => `${key} = ${value === null ? value : `'${value}'`} `)
+                    .join(', ')
+                }
             WHERE application_no = ${req.params.application_no}
         `;
 
-        try {
             const result = await db.query(sql)
             res.send(result);
         } catch (error) {
-            res.status(500).send({ message: 'Error updating student_register' });
+            res.status(500).send({ error: 'Error updating student_register', message: error });
+        }
+    }
+
+    insertStudentAdditionalDet = async (req, res) => {
+        try {
+
+            let sql = `SELECT appl_no FROM student_additional_det WHERE appl_no=${req.body.appl_no}`
+
+            const isPresent = await db.query(sql)
+            if (!isPresent[0][0]) {
+
+                const fields = Object.keys(req.body).join(', ');
+                const values = Object.values(req.body).map(value => {
+                    if (typeof value === 'string') {
+                        return `'${value.replace(/'/g, "''")}'`
+                    }
+                    return value
+                }).join(', ')
+
+                sql = `INSERT INTO student_additional_det (${fields}) VALUES (${values})`
+
+            } else {
+
+                sql = `
+                    UPDATE student_additional_det
+                    SET ${Object.entries(req.body)
+                        .map(([key, value]) => `${key} = ${value === null ? value : `'${value}'`} `)
+                        .join(', ')
+                    }
+                    WHERE appl_no = ${req.body.appl_no}
+                `;
+
+            }
+            const result = await db.query(sql)
+            res.json({message: "Row inserted"})
+        } catch (error) {
+            res.status(500).send({ error: 'Error inserting student_additional_det', message: error })
         }
     }
 }

@@ -36,6 +36,7 @@ class MasterTableController {
                 const branch_det = results[0].reduce((acc, item) => {
                     acc[item.branch_id] = {
                         course_id: item.course_id,
+                        branch_id: item.branch_id,
                         branch_name: item.branch_name,
                     };
                     return acc;
