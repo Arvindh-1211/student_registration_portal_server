@@ -27,7 +27,7 @@ class authController {
                 const token = jwt.sign(
                     { user_id: user.id, username: user.username, role: user.role },
                     JWT_SECRET,
-                    { expiresIn: '30d' }
+                    { expiresIn: '7d' }
                 );
 
                 const decoded = jwt.verify(token, JWT_SECRET)

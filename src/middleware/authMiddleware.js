@@ -15,7 +15,6 @@ function authMiddleware(req, res, next) {
             res.status(401).send("Unauthorized access");
         }
     } else {
-        console.log(req.headers)
         res.status(401).send("Authorization header missing or invalid");
     }
 }

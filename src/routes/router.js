@@ -14,10 +14,12 @@ router.route('/login')
     .post(AuthController.login)
 
 
-    
 router.use(authMiddleware)
 
 router.use('/master', masterTableRouter)
+
+router.route('/student_reg/new')
+    .post(studentRegController.insertNew)
 
 router.route('/student_reg/:application_no')
     .get(studentRegController.getData)
@@ -26,7 +28,10 @@ router.route('/student_reg/:application_no')
 router.route('/student_add_det')
     .post(studentRegController.insertStudentAdditionalDet)
 
-router.route('/student_reg/new')
-    .post(studentRegController.insertNew)
+router.route('/student_add_det/:application_no')
+    .get(studentRegController.getStudentAdditionalDet)
+
+router.route('/insert_into_camps/:application_no')
+    .post(studentRegController.insertIntoCAMPS)
 
 module.exports = router;

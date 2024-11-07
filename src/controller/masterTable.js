@@ -22,10 +22,13 @@ class MasterTableController {
         "sch_yr_pass": { data_id: 'year_id', data: 'year', data_master: 'year_pass_master' },
         "batch_id": { data_id: 'batch_id', data: 'batch', data_master: 'batch_master' },
         "acad_yr_id": { data_id: 'acc_year_id', data: 'acc_year', data_master: 'academic_year_master' },
+        "branch_id": { data_id: 'branch_id', data: 'branch_name', data_master: 'branch_master' },
+        "branch_type": { data_id: 'branch_id', data: 'branch_type', data_master: 'branch_master' },
         "course_id": { data_id: 'course_id', data: 'course_name', data_master: 'course_master' },
+        "regulation_id": { data_id: 'regulation_id', data: 'regulation', data_master: 'regulation_master' },
         "dept_id": { data_id: 'dept_id', data: 'dept_name', data_master: 'department_master' },
         "university_id": { data_id: 'university_id', data: 'university_name', data_master: 'university_master' },
-        "stu_cat_id": { data_id: 'stu_cat_id', data: 'stu_cat', data_master: 'student_category' },
+        "student_cat_id": { data_id: 'stu_cat_id', data: 'stu_cat', data_master: 'student_category' },
     }
 
     getOptions = async (req, res) => {
@@ -47,6 +50,24 @@ class MasterTableController {
             } finally {
                 return
             }
+        } else if (req.params.option == 'scholarship') {
+            try {
+                const sql = `SELECT discount_id, discount_name, discount_amount FROM admission_discount_master WHERE delete_status=0;`
+                const results = await camps.query(sql)
+                const response = results[0].reduce((acc, item) => {
+                    acc[item.discount_id] = {
+                        discount_id: item.discount_id,
+                        discount_name: item.discount_name,
+                        discount_amount: item.discount_amount,
+                    }
+                    return acc;
+                }, {});
+                res.json(response);
+            } catch (error) {
+                res.status(500).send({ message: 'Error fetching Scholarship Details from CAMPS' });
+            } finally {
+                return
+            }
         }
 
         try {
@@ -62,7 +83,7 @@ class MasterTableController {
             }, {});
             res.json(response);
         } catch (error) {
-            res.status(500).send({ message: `Error fetching ${req.params.option} from CAMPS` });
+            res.status(500).send({ error: `Error fetching ${req.params.option} from CAMPS`, message: error.message });
         }
     }
 
