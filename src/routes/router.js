@@ -13,8 +13,10 @@ const studentRegController = new StudentRegController();
 router.route('/login')
     .post(AuthController.login)
 
-
 router.use(authMiddleware)
+
+router.route('/register')
+    .post(roleMiddleware(['admin']), AuthController.register)
 
 router.use('/master', masterTableRouter)
 

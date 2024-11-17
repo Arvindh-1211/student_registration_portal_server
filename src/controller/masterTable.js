@@ -15,7 +15,6 @@ class MasterTableController {
         "state": { data_id: 'state_id', data: 'state_name', data_master: 'state_master' },
         "country": { data_id: 'country_id', data: 'country_name', data_master: 'country_master' },
         "quota": { data_id: 'quota_id', data: 'quota', data_master: 'quota_master' },
-        "boarding_point": { data_id: 'boarding_point_id', data: 'boarding_point', data_master: 'tr_boardingpoint_master' },
         "school_board": { data_id: 'board_id', data: 'board_name', data_master: 'school_board_master' },
         "sch_qual_id": { data_id: 'qual_id', data: 'qual_name', data_master: 'school_qual_master' },
         "study_medium": { data_id: 'medium_study_id', data: 'medium', data_master: 'medium_study_master' },
@@ -29,12 +28,13 @@ class MasterTableController {
         "dept_id": { data_id: 'dept_id', data: 'dept_name', data_master: 'department_master' },
         "university_id": { data_id: 'university_id', data: 'university_name', data_master: 'university_master' },
         "student_cat_id": { data_id: 'stu_cat_id', data: 'stu_cat', data_master: 'student_category' },
+        "boarding_point": { data_id: 'boarding_point_id', data: 'boarding_point', data_master: 'tr_boardingpoint_master' },
     }
 
     getOptions = async (req, res) => {
         if (req.params.option == 'branch') {
             try {
-                const sql = `SELECT branch_id, course_id, branch_name FROM branch_master`
+                const sql = `SELECT branch_id, course_id, branch_name FROM branch_master WHERE delete_status = 0 OR delete_status IS NULL`
                 const results = await camps.query(sql)
                 const branch_det = results[0].reduce((acc, item) => {
                     acc[item.branch_id] = {
@@ -52,7 +52,7 @@ class MasterTableController {
             }
         } else if (req.params.option == 'scholarship') {
             try {
-                const sql = `SELECT discount_id, discount_name, discount_amount FROM admission_discount_master WHERE delete_status=0;`
+                const sql = `SELECT discount_id, discount_name, discount_amount FROM admission_discount_master WHERE delete_status = 0 OR delete_status IS NULL;`
                 const results = await camps.query(sql)
                 const response = results[0].reduce((acc, item) => {
                     acc[item.discount_id] = {
@@ -68,6 +68,24 @@ class MasterTableController {
             } finally {
                 return
             }
+        } else if(req.params.option == 'boarding_point'){
+            try {
+                const data_id = this.options[req.params.option].data_id
+                const data = this.options[req.params.option].data
+                const data_master = this.options[req.params.option].data_master
+    
+                const sql = `SELECT ${data_id}, ${data} FROM ${data_master} WHERE status = 1`
+                const results = await camps.query(sql)
+                const response = results[0].reduce((acc, item) => {
+                    acc[item[data_id]] = item[data];
+                    return acc;
+                }, {});
+                res.json(response);
+            } catch (error) {
+                res.status(500).send({ error: `Error fetching ${req.params.option} from CAMPS`, message: error.message });
+            } finally {
+                return
+            }
         }
 
         try {
@@ -75,7 +93,7 @@ class MasterTableController {
             const data = this.options[req.params.option].data
             const data_master = this.options[req.params.option].data_master
 
-            const sql = `SELECT ${data_id}, ${data} FROM ${data_master}`
+            const sql = `SELECT ${data_id}, ${data} FROM ${data_master} WHERE delete_status = 0 OR delete_status IS NULL`
             const results = await camps.query(sql)
             const response = results[0].reduce((acc, item) => {
                 acc[item[data_id]] = item[data];

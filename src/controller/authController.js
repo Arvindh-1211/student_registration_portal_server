@@ -21,7 +21,7 @@ class authController {
 
             const user = result[0][0];
 
-            const isMatch = await bcrypt.compare(password, user.password);
+            const isMatch = await bcrypt.compare(atob(password), user.password);
 
             if (isMatch) {
                 const token = jwt.sign(
@@ -44,12 +44,12 @@ class authController {
 
     register = async (req, res) => {
         try {
-            const { username, password } = req.body
+            const { username, password, role } = req.body
 
             const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(password, salt)
+            const hashedPassword = await bcrypt.hash(atob(password), salt)
 
-            const sql = `INSERT INTO users (username, password) VALUES ('${username}', '${hashedPassword}')`
+            const sql = `INSERT INTO users (username, password, role) VALUES ('${username}', '${hashedPassword}', '${role}')`
 
             await db.query(sql)
 

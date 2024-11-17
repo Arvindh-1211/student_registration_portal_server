@@ -130,7 +130,7 @@ class StudentRegController {
             const sql = `
             UPDATE student_register
             SET ${Object.entries(req.body)
-                    .map(([key, value]) => `${key} = ${value === null ? value : `'${value}'`} `)
+                    .map(([key, value]) => `${key} = ${value === null || value === '' ? null : `'${value}'`} `)
                     .join(', ')
                 }
             WHERE sno = ${req.params.application_no}
@@ -204,7 +204,9 @@ class StudentRegController {
             // Getting application number from student_reg_temp
             let sql = `INSERT INTO student_reg_temp (ip) VALUES (NULL);`
 
-            const application_no = await db.query(sql)
+            // TODO
+            const application_no = await camps.query(sql)
+            // const application_no = await db.query(sql)
 
             const APPLICATION_NO = application_no[0].insertId
 
@@ -239,8 +241,9 @@ class StudentRegController {
             }).join(', ')
 
             sql = `INSERT INTO student_register (${fields}) VALUES (${values})`
-            // let result = await camps.query(sql)
-
+            // TODO
+            let result = await camps.query(sql)
+            // let result = await db.query(sql)
 
 
             // Inserting into student_additional_det table
@@ -248,6 +251,7 @@ class StudentRegController {
 
             let student_additional_det = await db.query(sql)
             student_additional_det = student_additional_det[0][0]
+            student_additional_det['appl_no'] = APPLICATION_NO
             delete student_additional_det['enroll_no']
 
             fields = Object.keys(student_additional_det).join(', ')
@@ -261,13 +265,14 @@ class StudentRegController {
             }).join(', ')
 
             sql = `INSERT INTO student_additional_det (${fields}) VALUES (${values})`
-            // result = await camps.query(sql)
-            res.send(sql)
+            // TODO
+            result = await camps.query(sql)
+            // result = await db.query(sql)
 
-            // res.json({ message: "Row inserted" })
+            res.json({ APPLICATION_NO: APPLICATION_NO })
 
         } catch (error) {
-            res.status(500).send({ error: 'Error inserting into CAMPS', message: error.message });
+            res.status(500).send({ error: 'Error inserting into CAMPS', message: error });
         }
     }
 }
