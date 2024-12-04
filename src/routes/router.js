@@ -36,4 +36,7 @@ router.route('/student_add_det/:application_no')
 router.route('/insert_into_camps/:application_no')
     .post(studentRegController.insertIntoCAMPS)
 
+router.route('/if_exist')
+    .get(studentRegController.ifExist)
+
 module.exports = router;

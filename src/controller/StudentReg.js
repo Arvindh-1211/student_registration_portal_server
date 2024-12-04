@@ -1,5 +1,4 @@
-const camps = require("../utils/connectCAMPS");
-const db = require("../utils/connectDB");
+const {camps} = require("../utils/connectCAMPS");
 
 class StudentRegController {
     getData = async (req, res) => {
@@ -9,11 +8,11 @@ class StudentRegController {
 
             const sql = `
             SELECT ${fields}
-            FROM student_register
+            FROM pre_student_register
             WHERE sno = ${applicationNo}
             `;
 
-            const result = await db.query(sql)
+            const result = await camps.query(sql)
             res.send(result[0][0]);
         } catch (error) {
             res.status(500).send({ error: 'Error fetching data from student_register', message: error.message });
@@ -106,14 +105,14 @@ class StudentRegController {
             fields.acad_yr_id = acad_yr_id[0][0].acc_year_id
             try {
                 const sql = `
-                    INSERT INTO student_register (
+                    INSERT INTO pre_student_register (
                     ${Object.keys(fields).join(', ')}
                     )
                     VALUES(
                     '${Object.values(fields).join("', '")}'
                     )
                 `
-                const result = await db.query(sql)
+                const result = await camps.query(sql)
                 const application_no = result[0].insertId
                 res.send({ application_no: application_no })
             } catch (error) {
@@ -128,7 +127,7 @@ class StudentRegController {
     updateStudentReg = async (req, res) => {
         try {
             const sql = `
-            UPDATE student_register
+            UPDATE pre_student_register
             SET ${Object.entries(req.body)
                     .map(([key, value]) => `${key} = ${value === null || value === '' ? null : `'${value}'`} `)
                     .join(', ')
@@ -136,7 +135,7 @@ class StudentRegController {
             WHERE sno = ${req.params.application_no}
         `;
 
-            const result = await db.query(sql)
+            const result = await camps.query(sql)
             res.send(result);
         } catch (error) {
             res.status(500).send({ error: 'Error updating student_register', message: error });
@@ -146,9 +145,9 @@ class StudentRegController {
     insertStudentAdditionalDet = async (req, res) => {
         try {
 
-            let sql = `SELECT appl_no FROM student_additional_det WHERE appl_no=${req.body.appl_no}`
+            let sql = `SELECT appl_no FROM pre_student_additional_det WHERE appl_no=${req.body.appl_no}`
 
-            const isPresent = await db.query(sql)
+            const isPresent = await camps.query(sql)
             if (!isPresent[0][0]) {
 
                 const fields = Object.keys(req.body).join(', ');
@@ -159,12 +158,12 @@ class StudentRegController {
                     return value
                 }).join(', ')
 
-                sql = `INSERT INTO student_additional_det (${fields}) VALUES (${values})`
+                sql = `INSERT INTO pre_student_additional_det (${fields}) VALUES (${values})`
 
             } else {
 
                 sql = `
-                    UPDATE student_additional_det
+                    UPDATE pre_student_additional_det
                     SET ${Object.entries(req.body)
                         .map(([key, value]) => `${key} = ${value === null ? value : `'${value}'`} `)
                         .join(', ')
@@ -173,7 +172,7 @@ class StudentRegController {
                 `;
 
             }
-            const result = await db.query(sql)
+            const result = await camps.query(sql)
             res.json({ message: "Row inserted" })
         } catch (error) {
             res.status(500).send({ error: 'Error inserting student_additional_det', message: error })
@@ -187,11 +186,11 @@ class StudentRegController {
 
             const sql = `
                 SELECT ${fields}
-                FROM student_additional_det
+                FROM pre_student_additional_det
                 WHERE appl_no = ${applicationNo}
             `;
 
-            const result = await db.query(sql)
+            const result = await camps.query(sql)
 
             res.send(result[0][0]);
         } catch (error) {
@@ -204,18 +203,16 @@ class StudentRegController {
             // Getting application number from student_reg_temp
             let sql = `INSERT INTO student_reg_temp (ip) VALUES (NULL);`
 
-            // TODO
             const application_no = await camps.query(sql)
-            // const application_no = await db.query(sql)
 
             const APPLICATION_NO = application_no[0].insertId
 
             const applicationNo = req.params.application_no;
 
             // Inserting into student_register table
-            sql = `SELECT * FROM student_register WHERE sno = ${applicationNo}`;
+            sql = `SELECT * FROM pre_student_register WHERE sno = ${applicationNo}`;
 
-            let student_reg = await db.query(sql)
+            let student_reg = await camps.query(sql)
             student_reg = student_reg[0][0]
             delete student_reg['sno']
             student_reg['application_no'] = APPLICATION_NO
@@ -241,15 +238,13 @@ class StudentRegController {
             }).join(', ')
 
             sql = `INSERT INTO student_register (${fields}) VALUES (${values})`
-            // TODO
             let result = await camps.query(sql)
-            // let result = await db.query(sql)
 
 
             // Inserting into student_additional_det table
-            sql = `SELECT * FROM student_additional_det WHERE appl_no = ${applicationNo}`
+            sql = `SELECT * FROM pre_student_additional_det WHERE appl_no = ${applicationNo}`
 
-            let student_additional_det = await db.query(sql)
+            let student_additional_det = await camps.query(sql)
             student_additional_det = student_additional_det[0][0]
             student_additional_det['appl_no'] = APPLICATION_NO
             delete student_additional_det['enroll_no']
@@ -265,14 +260,40 @@ class StudentRegController {
             }).join(', ')
 
             sql = `INSERT INTO student_additional_det (${fields}) VALUES (${values})`
-            // TODO
             result = await camps.query(sql)
             // result = await db.query(sql)
+
+            // Updating application number in student_register and student_additional_det
+            sql = `UPDATE pre_student_register SET application_no = ${APPLICATION_NO} WHERE sno = ${applicationNo}`
+            result = await camps.query(sql)
+
+            sql = `UPDATE pre_student_additional_det SET appl_no = ${APPLICATION_NO} WHERE appl_no = ${applicationNo}`
+            result = await camps.query(sql)
 
             res.json({ APPLICATION_NO: APPLICATION_NO })
 
         } catch (error) {
             res.status(500).send({ error: 'Error inserting into CAMPS', message: error });
+        }
+
+    }
+    ifExist = async (req, res) => {
+        try {
+            const temp_appl_no = req.query.appl_no
+
+            const sql = `SELECT sno, application_no FROM pre_student_register WHERE sno=${temp_appl_no}`
+            const result = await camps.query(sql)
+
+            if (result[0].length === 0) {
+                return res.status(422).json({ message: "Application not found" })
+            } else if (result[0][0].application_no) {
+                return res.status(422).json({ message: "Application already submitted" })
+            }
+
+            res.status(200).json({ message: "Application found" })
+
+        } catch (error) {
+            res.status(500).send({ error: 'Some error occurred', message: error.message });
         }
     }
 }

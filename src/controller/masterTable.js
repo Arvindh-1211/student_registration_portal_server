@@ -1,4 +1,4 @@
-const camps = require("../utils/connectCAMPS");
+const {camps} = require("../utils/connectCAMPS");
 
 class MasterTableController {
     options = {

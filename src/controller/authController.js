@@ -1,7 +1,7 @@
-const db = require("../utils/connectDB");
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require("../config/config");
+const { JWT_SECRET } = require("../config/config")
+const {userTable} = require('../utils/connectCAMPS')
+const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
 
 class authController {
     login = async (req, res) => {
@@ -12,8 +12,8 @@ class authController {
                 return res.status(400).json({ message: "Username and password are required" });
             }
 
-            const sql = `SELECT * FROM users WHERE username = ?`
-            const result = await db.query(sql, [username]);
+            const sql = `SELECT * FROM registration_user WHERE username = ?`
+            const result = await userTable.query(sql, [username]);
 
             if (result[0].length === 0) {
                 return res.status(400).json({ message: "Invalid Credentials" });
@@ -21,9 +21,12 @@ class authController {
 
             const user = result[0][0];
 
-            const isMatch = await bcrypt.compare(atob(password), user.password);
+            const salt = user.pwdsalt;
+            const hashedPassword = crypto.createHash('sha256');
+            hashedPassword.update(salt + atob(password));
+            const hashedPasswordHex = hashedPassword.digest('hex');
 
-            if (isMatch) {
+            if (hashedPasswordHex === user.password) {
                 const token = jwt.sign(
                     { user_id: user.id, username: user.username, role: user.role },
                     JWT_SECRET,
@@ -44,14 +47,13 @@ class authController {
 
     register = async (req, res) => {
         try {
-            const { username, password, role } = req.body
+            const { username, password } = req.body
 
-            const salt = await bcrypt.genSalt(10)
-            const hashedPassword = await bcrypt.hash(atob(password), salt)
+            const salt = (Math.random() + 1).toString(36).substring(2)
 
-            const sql = `INSERT INTO users (username, password, role) VALUES ('${username}', '${hashedPassword}', '${role}')`
+            const sql = `INSERT INTO registration_user (username, password, pwdsalt) VALUES ('${username}', SHA256(CONCAT('${salt}', '${password}')), '${salt}');`
 
-            await db.query(sql)
+            await userTable.query(sql)
 
             res.send("User created successfully")
         } catch (error) {
