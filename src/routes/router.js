@@ -15,8 +15,8 @@ router.route('/login')
 
 router.use(authMiddleware)
 
-router.route('/register')
-    .post(roleMiddleware(['admin']), AuthController.register)
+// router.route('/register')
+//     .post(roleMiddleware(['admin']), AuthController.register)
 
 router.use('/master', masterTableRouter)
 
