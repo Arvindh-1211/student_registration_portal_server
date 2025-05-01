@@ -1,7 +1,7 @@
 const express = require("express");
 const Router = express.Router;
 
-const MasterTableController = require("../controller/masterTable");
+const MasterTableController = require("../controller/MasterTable");
 
 const masterTableRouter = Router();
 const masterTableController = new MasterTableController();

@@ -2,21 +2,21 @@ const express = require("express");
 const Router = express.Router;
 
 const masterTableRouter = require('./masterTableRouter');
-const authController = require("../controller/authController");
+const AuthController = require("../controller/AuthController");
 const StudentRegController = require("../controller/StudentReg");
 const { authMiddleware, roleMiddleware } = require("../middleware/authMiddleware");
 
 const router = Router();
-const AuthController = new authController
+const authController = new AuthController
 const studentRegController = new StudentRegController();
 
 router.route('/login')
-    .post(AuthController.login)
+    .post(authController.login)
 
 router.use(authMiddleware)
 
 // router.route('/register')
-//     .post(roleMiddleware(['admin']), AuthController.register)
+//     .post(roleMiddleware(['admin']), authController.register)
 
 router.use('/master', masterTableRouter)
 
@@ -38,5 +38,11 @@ router.route('/insert_into_camps/:application_no')
 
 router.route('/if_exist')
     .get(studentRegController.ifExist)
+
+router.route('/import_students')
+    .post(roleMiddleware(['admin', 'manager']), studentRegController.importStudents)
+
+router.route('/add_user')
+    .post(roleMiddleware(['admin']), authController.addUser)
 
 module.exports = router;

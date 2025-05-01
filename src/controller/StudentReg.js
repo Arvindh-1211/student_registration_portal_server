@@ -1,6 +1,190 @@
-const {camps} = require("../utils/connectCAMPS");
+const { camps } = require("../utils/connectCAMPS");
 
 class StudentRegController {
+
+    importStudents = async (req, res) => {
+        try {
+            const data = req.body;
+            let insertedCount = 0;
+            let skippedCount = 0;
+
+            // const fields = Object.keys(data[0]).join(', '); // Extract column names
+
+            for (const row of data) {
+                try {
+                    // Check if the row is already present in the database
+                    const checkSql = `SELECT * FROM pre_student_register WHERE tnea_app_no = ${row.application_id}`;
+                    const checkResult = await camps.query(checkSql);
+                    if (checkResult[0].length > 0) {
+                        skippedCount++;
+                        continue; // Skip this row if it already exists
+                    }
+
+
+                    // Insert the row into the database
+                    let fields = {
+                        tnea_app_no: row.application_id,
+                        gender: row.gender,
+                        stu_mobile_no: row.mobile,
+                        stu_email_id: row.email,
+                        seat_cat: 'GOVERNMENT',
+
+                        // To be formatted
+                        student_name: '',
+                        initial: '',
+
+                        // To be fetched from master tables
+                        branch_id: '',
+                        community_id: '',
+
+                        batch_id: '',
+                        acad_yr_id: '',
+                        course_id: '',
+                        dept_id: '',
+                        branch_type: '',
+                        degree_level: '',
+                        year_of_admission: '',
+                        year_of_completion: '',
+                        regulation_id: '',
+                        university_id: '5',
+                        student_cat_id: '',
+                        year_of_study: '',
+                        sem_of_study: '',
+                        section: 'A',
+                    }
+
+                    try {
+                        // Getting name and initial
+                        const { initial, name } = ((p) => ({
+                            initial: p.filter(w => /^[A-Z]$/.test(w)).join(' '),
+                            name: p.filter(w => !/^[A-Z]$/.test(w)).join(' ')
+                        }))(row.name.toUpperCase().trim().split(/\s+/));
+                        fields.initial = initial
+                        fields.student_name = name
+                        console.log(`Name: ${name}, Initial: ${initial}`);
+
+                        // Fetching community_id from community_master
+                        try {
+                        const community_id = await camps.query(`
+                                SELECT community_id FROM community_master WHERE community_name='${row.community}'
+                            `)
+                        fields.community_id = community_id?.[0]?.[0]?.community_id
+                        } catch (error) {
+                            console.error(`Error fetching community_id: ${error.message}`);
+                        }
+
+                        const branch_id = await camps.query(`
+                                SELECT branch_id FROM branch_master WHERE branch_name='${row.branch.toUpperCase()}' AND degree_level='UG'
+                            `)
+                        fields.branch_id = branch_id?.[0]?.[0]?.branch_id
+
+                        fields.student_cat_id = 11 // Assuming students are REGULAR category
+
+                        fields.branch_type = fields.branch_id
+                        fields.year_of_admission = new Date().getFullYear()
+
+                        if (fields.student_cat_id == 12) {
+                            fields.year_of_study = 'II'
+                            fields.sem_of_study = 'III'
+                            fields.year_of_completion = fields.year_of_admission + 3
+                        } else {
+                            fields.year_of_study = 'I'
+                            fields.sem_of_study = 'I'
+                        }
+
+                        // Getting branch details
+                        const branch_details = await camps.query(`
+                                SELECT course_id, dept_id, branch_type, degree_level, no_of_year
+                                FROM branch_master WHERE branch_id=${fields.branch_id}
+                            `)
+                        fields.course_id = branch_details[0][0].course_id
+                        fields.dept_id = branch_details[0][0].dept_id
+                        fields.degree_level = branch_details[0][0].degree_level
+
+                        if (fields.year_of_completion === '') {
+                            fields.year_of_completion = fields.year_of_admission + branch_details[0][0].no_of_year
+                        }
+
+                        // Getting regulation_id
+                        let year_master_id = ''
+                        if (fields.degree_level == 'RS') {
+                            year_master_id = '4'
+                        }
+                        else if (fields.degree_level == 'PG') {
+                            year_master_id = '3'
+                        }
+                        else if (fields.degree_level == 'UG' && fields.student_cat_id == 12) {
+                            year_master_id = '2'
+                        }
+                        else {
+                            year_master_id = '1'
+                        }
+                        const regulation_id = await camps.query(`
+                            SELECT regulation FROM year_master WHERE id=${year_master_id}
+                        `)
+                        fields.regulation_id = regulation_id[0][0].regulation
+
+                        // Getting batch_id
+                        if (fields.student_cat_id == 11) {
+                            const batch_id = await camps.query(`
+                                    SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission}
+                                `)
+                            fields.batch_id = batch_id[0][0].batch_id
+                        } else {
+                            const batch_id = await camps.query(`
+                                SELECT batch_id FROM batch_master WHERE batch=${fields.year_of_admission - 1}
+                                `)
+                            fields.batch_id = batch_id[0][0].batch_id
+                        }
+
+                        const acad_yr_id = await camps.query(`
+                            SELECT acc_year_id FROM academic_year_master WHERE acc_year='${fields.year_of_admission}-${fields.year_of_admission + 1}'
+                            `)
+
+                        fields.acad_yr_id = acad_yr_id[0][0].acc_year_id
+
+                        try {
+                            const sql = `
+                                INSERT INTO pre_student_register (
+                                ${Object.keys(fields).join(', ')}
+                                )
+                                VALUES(
+                                '${Object.values(fields).join("', '")}'
+                                )
+                            `
+                            const result = await camps.query(sql)
+                            const application_no = result[0].insertId
+                            insertedCount++;
+
+                        } catch (error) {
+                            console.error(`Error inserting row: ${JSON.stringify(row)} - ${error.message}`);
+                            console.log(error);
+                            skippedCount++;
+
+                        }
+                    } catch (error) {
+                        console.error(`Error inserting row: ${JSON.stringify(row)} - ${error.message}`);
+                        console.log(error);
+                        skippedCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error inserting row: ${JSON.stringify(row)} - ${error.message}`);
+                    console.log(error);
+
+                    skippedCount++;
+                }
+            }
+
+            res.json({
+                message: "Insertion completed",
+                insertedCount,
+                skippedCount
+            });
+        } catch (error) {
+            res.status(500).json({ error: 'Error inserting data', message: error.message });
+        }
+    }
+
     getData = async (req, res) => {
         try {
             const fields = req.query.fields;

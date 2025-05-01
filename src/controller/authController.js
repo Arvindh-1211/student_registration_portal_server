@@ -1,8 +1,8 @@
 const { JWT_SECRET } = require("../config/config")
-const { userTable } = require('../utils/connectCAMPS')
+const { userTable, camps } = require('../utils/connectCAMPS')
 const jwt = require('jsonwebtoken')
 
-class authController {
+class AuthController {
     login = async (req, res) => {
         try {
             const { username, password, loginType } = req.body;
@@ -14,7 +14,7 @@ class authController {
                     return res.status(400).json({ message: "Email is required" });
                 }
 
-                let sql = `SELECT * FROM registration_user WHERE username = '${email}'`;
+                let sql = `SELECT * FROM registration_user WHERE username = '${email}' AND status = 1`;
                 let result = await userTable.query(sql);
 
                 if (result[0].length === 0) {
@@ -39,32 +39,29 @@ class authController {
                     return res.status(400).json({ message: "Username and password are required" });
                 }
 
-                let sql = `SELECT * FROM registration_user WHERE username = '${username}'`
-                let result = await userTable.query(sql);
+                let sql = `SELECT * FROM pre_student_register WHERE tnea_app_no = '${username}'`
+                let result = await camps.query(sql);
 
                 if (result[0].length === 0) {
                     return res.status(400).json({ message: "Invalid Credentials" });
                 }
 
-                const pwdsalt = result[0][0].pwdsalt
+                sql = `SELECT * FROM pre_student_register WHERE tnea_app_no = '${username}' AND stu_mobile_no = '${atob(password)}'`
 
-                // TODO Change table name, coloumn names
-                sql = `SELECT * FROM registration_user WHERE username = '${username}' AND password = '${atob(password)}'`
-
-                result = await userTable.query(sql);
+                result = await camps.query(sql);
 
                 const user = result[0][0];
 
                 if (user) {
                     const token = jwt.sign(
-                        { user_id: user.id, username: user.username, role: user.role },
+                        { user_id: user.tnea_app_no, username: user.student_name, role: 'applicant' },
                         JWT_SECRET,
                         { expiresIn: '7d' }
                     );
 
                     const decoded = jwt.verify(token, JWT_SECRET)
 
-                    res.json({ token: token, user_id: user.id, username: user.username, role: user.role, exp: decoded.exp });
+                    res.json({ application_no: user.sno, token: token, user_id: user.tnea_app_no, username: user.student_name, role: 'applicant', exp: decoded.exp });
                 } else {
                     res.status(400).json({ message: "Invalid Credentials" });
                 }
@@ -85,7 +82,7 @@ class authController {
 
                 const pwdsalt = result[0][0].pwdsalt
 
-                sql = `SELECT * FROM registration_user WHERE username = '${username}' AND password = SHA2(CONCAT('${atob(password)}', '${pwdsalt}'), 256)`
+                sql = `SELECT * FROM registration_user WHERE username = '${username}' AND password = SHA2(CONCAT('${atob(password)}', '${pwdsalt}'), 256) AND status = 1`
 
                 result = await userTable.query(sql);
 
@@ -106,11 +103,26 @@ class authController {
                 }
             }
         } catch (error) {
+            console.log(error);
+            
             res.status(500).json({ error: "Unable to login", message: error.message });
         }
     };
 
 
+    addUser = async (req, res) => {
+        try {
+            const { email, role } = req.body
+
+            const sql = `INSERT INTO registration_user (username, role) VALUES ('${email}', '${role}');`
+
+            await userTable.query(sql)
+
+            res.send("User added successfully")
+        } catch (error) {
+            res.status(500).json({ error: "Unable to add user", message: error.message })
+        }
+    }
     // register = async (req, res) => {
     //     try {
     //         const { username, password } = req.body
@@ -128,4 +140,4 @@ class authController {
     // }
 }
 
-module.exports = authController
+module.exports = AuthController
