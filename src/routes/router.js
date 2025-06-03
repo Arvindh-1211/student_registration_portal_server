@@ -39,10 +39,18 @@ router.route('/insert_into_camps/:application_no')
 router.route('/if_exist')
     .get(studentRegController.ifExist)
 
-router.route('/import_students')
-    .post(roleMiddleware(['admin', 'manager']), studentRegController.importStudents)
+router.route('/student_user_details')
+    .get(roleMiddleware(['admin', 'manager']), studentRegController.getStudentUserDetails)
+    .post(roleMiddleware(['admin', 'manager']), studentRegController.insertStudentUserDetails)
 
-router.route('/add_user')
-    .post(roleMiddleware(['admin']), authController.addUser)
+    
+router.use(roleMiddleware(['admin']))
+router.route('/user')
+    .get(authController.getUserDetails)
+    .post(authController.addUser)
+
+router.route('/user/:id')
+    .put(authController.editUser)
+    .delete(authController.deleteUser)
 
 module.exports = router;
