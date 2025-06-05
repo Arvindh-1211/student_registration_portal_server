@@ -1,9 +1,36 @@
 const { camps } = require("../utils/connectCAMPS");
 
 class StudentRegController {
+    getIncompleteApplication = async (req, res) => {
+        try {
+            const sql = `
+                SELECT psr.sno, psr.student_name, psr.initial, psr.father_name, psr.mother_name, psr.tnea_app_no,
+                    (SELECT bm.branch_name FROM branch_master bm WHERE bm.branch_id=psr.branch_id) AS branch,
+                    (SELECT cm.course_code FROM course_master cm WHERE cm.course_id=psr.course_id) AS course,
+                    (SELECT sc.stu_cat FROM student_category sc WHERE sc.stu_cat_id=psr.student_cat_id) AS student_cat
+                FROM pre_student_register psr WHERE psr.application_no IS NULL ORDER BY psr.sno DESC
+            `;
+            const result = await camps.query(sql)
+            res.json(result[0]);
+        } catch (error) {
+            res.status(500).send({ error: 'Error fetching incomplete applications', message: error.message });
+        }
+    }
+
+    deleteIncompleteApplication = async (req, res) => {
+        try {
+            const applicationNo = req.params.application_no;
+            const sql = `DELETE FROM pre_student_register WHERE sno = ${applicationNo}`;
+            await camps.query(sql)
+            res.json({ message: `Application: ${applicationNo} deleted successfully` });
+        } catch (error) {
+            res.status(500).send({ error: 'Error fetching data from registration_user_details', message: error.message });
+        }
+    }
+
     getStudentUserDetails = async (req, res) => {
         try {
-            const sql = `SELECT * FROM registration_user_details`;
+            const sql = `SELECT * FROM registration_user_details ORDER BY application_id DESC`;
             const result = await camps.query(sql)
             res.json(result[0]);
         } catch (error) {
@@ -29,7 +56,7 @@ class StudentRegController {
                     );
 
                     // Check if the row already exists in the database
-                    let checkSql = `SELECT COUNT(*) as count FROM registration_user_details WHERE application_id = ${row.application_id}`;
+                    let checkSql = `SELECT COUNT(*) as count FROM registration_user_details WHERE application_id = '${row.application_id}'`;
                     let checkResult = await camps.query(checkSql);
 
                     if (checkResult[0][0].count > 0) {
@@ -237,11 +264,14 @@ class StudentRegController {
 
                 const fields = Object.keys(req.body).join(', ');
                 const values = Object.values(req.body).map(value => {
-                    if (typeof value === 'string') {
-                        return `'${value.replace(/'/g, "''")}'`
+                    if (value === undefined || value === null || value === '') {
+                        return 'NULL';
                     }
-                    return value
-                }).join(', ')
+                    if (typeof value === 'string') {
+                        return `'${value.replace(/'/g, "''")}'`;
+                    }
+                    return value;
+                }).join(', ');
 
                 sql = `INSERT INTO pre_student_additional_det (${fields}) VALUES (${values})`
 
@@ -310,6 +340,18 @@ class StudentRegController {
             if (student_reg['school_tc_date']) {
                 student_reg['school_tc_date'] = new Date(student_reg['school_tc_date']).toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')
             }
+            if (student_reg['tnea_app_no']) {
+                if (student_reg['tnea_app_no'][0] === 'M') {
+                    student_reg['tnea_app_no'] = null
+                }
+                else if (student_reg['tnea_app_no'][0] === 'G') {
+                    student_reg['tnea_app_no'] = student_reg['tnea_app_no'].substring(1)
+                    if (student_reg['tnea_app_no'][0] === 'L') {
+                        student_reg['tnea_app_no'] = student_reg['tnea_app_no'].substring(1)
+                    }
+                }
+            }
+
             student_reg['app_date'] = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-')
 
             let fields = Object.keys(student_reg).join(', ')

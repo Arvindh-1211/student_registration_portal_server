@@ -48,9 +48,28 @@ class AuthController {
                     sql = `SELECT * FROM registration_user_details WHERE application_id = '${username}' AND mobile = '${atob(password)}'`
                     result = await camps.query(sql);
 
-                    let row = result[0][0]
+                    let row = result[0][0];
                     if (!row) {
                         return res.status(400).json({ message: "Invalid Credentials" });
+                    }
+                    
+                    let admissionType, admissionQuota
+                    
+                    if(username[0] === 'G'){
+                        admissionQuota = 'GOVERNMENT'
+                    }
+                    else if (username[0] === 'M') {
+                        admissionQuota = 'MANAGEMENT'
+                    }
+                    else{
+                        return res.status(400).json({ message: "Invalid Credentials" });
+                    }
+
+                    if(username[1] == 'L'){
+                        admissionType = 'LATERAL'
+                    }
+                    else {
+                        admissionType = 'REGULAR'
                     }
 
                     // Insert the row into the database
@@ -59,8 +78,8 @@ class AuthController {
                         gender: row.gender,
                         stu_mobile_no: row.mobile,
                         stu_email_id: row.email,
-                        seat_cat: 'GOVERNMENT',
-                        
+                        seat_cat: '',
+
                         // First graduate details
                         // adm_sch_name_1: row.first_graduate === 'Yes' ? 'FIRST GRADUATE.' : '',
                         // adm_sch_amt_1:  row.first_graduate === 'Yes' ? '25000' : '',
@@ -89,6 +108,20 @@ class AuthController {
                         section: 'A',
                     }
 
+                    if (admissionType == "LATERAL") {
+                        fields.student_cat_id = 12;
+                    }
+                    else {
+                        fields.student_cat_id = 11; //REGULAR
+                    }
+
+                    if (admissionQuota == "GOVERNMENT") {
+                        fields.seat_cat = 'GOVERNMENT';
+                    }
+                    else {
+                        fields.seat_cat = 'MANAGEMENT';
+                    }
+
                     try {
                         // Getting name and initial
                         const { initial, name } = ((p) => ({
@@ -113,8 +146,6 @@ class AuthController {
                                 SELECT branch_id FROM branch_master WHERE branch_name='${row.branch.toUpperCase()}' AND degree_level='UG'
                             `)
                         fields.branch_id = branch_id?.[0]?.[0]?.branch_id
-
-                        fields.student_cat_id = 11 // Assuming students are REGULAR category
 
                         fields.branch_type = fields.branch_id
                         fields.year_of_admission = new Date().getFullYear()
@@ -188,6 +219,7 @@ class AuthController {
                                 '${Object.values(fields).join("', '")}'
                                 )
                             `
+                            
                             const result = await camps.query(sql)
                             const application_no = result[0].insertId
 
@@ -219,7 +251,7 @@ class AuthController {
 
                     const decoded = jwt.verify(token, JWT_SECRET)
 
-                    res.json({ application_no: user.sno, token: token, user_id: user.tnea_app_no, username: user.student_name, name:user.student_name, role: 'applicant', exp: decoded.exp });
+                    res.json({ application_no: user.sno, token: token, user_id: user.tnea_app_no, username: user.student_name, name: user.student_name, role: 'applicant', exp: decoded.exp });
                 } else {
                     res.status(400).json({ message: "Invalid Credentials" });
                 }
@@ -277,7 +309,7 @@ class AuthController {
 
             if (result[0][0] && result[0][0].status == 1) {
                 return res.status(400).json({ message: "User already exists" })
-            } 
+            }
             else if (result[0][0] && result[0][0].status == 0) {
                 sql = `UPDATE registration_user SET status = 1 WHERE username = '${email}'`
                 await userTable.query(sql)
@@ -294,7 +326,7 @@ class AuthController {
 
     getUserDetails = async (req, res) => {
         try {
-            const sql = `SELECT user_id, username, role FROM registration_user WHERE status = 1`
+            const sql = `SELECT user_id, username AS email, role FROM registration_user WHERE status = 1`
 
             const result = await userTable.query(sql)
 

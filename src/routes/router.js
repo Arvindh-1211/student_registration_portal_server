@@ -43,7 +43,12 @@ router.route('/student_user_details')
     .get(roleMiddleware(['admin', 'manager']), studentRegController.getStudentUserDetails)
     .post(roleMiddleware(['admin', 'manager']), studentRegController.insertStudentUserDetails)
 
-    
+router.route('/incomplete_application')
+    .get(roleMiddleware(['admin', 'manager']), studentRegController.getIncompleteApplication)
+
+router.route('/incomplete_application/:application_no')
+    .delete(roleMiddleware(['admin', 'manager']), studentRegController.deleteIncompleteApplication)
+
 router.use(roleMiddleware(['admin']))
 router.route('/user')
     .get(authController.getUserDetails)
