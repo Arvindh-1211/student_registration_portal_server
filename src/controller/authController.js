@@ -43,6 +43,7 @@ class AuthController {
                 let sql = `SELECT * FROM pre_student_register WHERE tnea_app_no = '${username}'`
                 let result = await camps.query(sql);
 
+                
                 // Insetion of new user in pre_student_register table if the user logins for the first time
                 if (result[0].length === 0) {
                     sql = `SELECT * FROM registration_user_details WHERE application_id = '${username}' AND mobile = '${atob(password)}'`
@@ -53,8 +54,8 @@ class AuthController {
                         return res.status(400).json({ message: "Invalid Credentials" });
                     }
                     
-                    let admissionType, admissionQuota
                     
+                    let admissionType,  admissionQuota
                     if(username[0] === 'G'){
                         admissionQuota = 'GOVERNMENT'
                     }
@@ -244,14 +245,14 @@ class AuthController {
                 // Generate JWT token
                 if (user) {
                     const token = jwt.sign(
-                        { user_id: user.tnea_app_no, username: user.student_name, role: 'applicant' },
+                        { user_id: user.tnea_app_no, username: user.student_name, role: user.seat_cat },
                         JWT_SECRET,
                         { expiresIn: '7d' }
                     );
 
                     const decoded = jwt.verify(token, JWT_SECRET)
 
-                    res.json({ application_no: user.sno, token: token, user_id: user.tnea_app_no, username: user.student_name, name: user.student_name, role: 'applicant', exp: decoded.exp });
+                    res.json({ application_no: user.sno, token: token, user_id: user.tnea_app_no, username: user.student_name, name: user.student_name, role: user.seat_cat, exp: decoded.exp });
                 } else {
                     res.status(400).json({ message: "Invalid Credentials" });
                 }
